@@ -2,12 +2,12 @@
 A simple Nextflow workflow designed to map short sequences to human genome and perform a few basic analyses of the mapping results. The short sequences may be of different origin, e.g. sgRNA sequences or sequencing short reads (for simplicity such short sequences are referred to as "reads" in this documentation). If you feel that the provided here help is not enough, see detailed comments in the workflow files.
 
 ### Contents
-1. [Environment setup](#1)
-1.1. [Manual environment configuration](#1.1)
-1.2. [Automatic environment setup with Docker](#1.2)
-2. [Workflow detailed description](#2)
-2.1. [Workflow configuration details](#2.1)
-2.2. [Workflow design](#2.2)
+1. [Environment setup](#1)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;1.1. [Manual environment configuration](#1.1)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;1.2. [Automatic environment setup with Docker](#1.2)<br>
+2. [Workflow detailed description](#2)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;2.1. [Workflow configuration details](#2.1)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;2.2. [Workflow design](#2.2)<br>
 3.  [Running the workflow](#3)
 
 ### <a name="1">1. Environment setup</a>
