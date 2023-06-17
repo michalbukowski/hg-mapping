@@ -11,11 +11,12 @@ A simple Nextflow workflow designed to map short sequences to human genome and p
 3.  [Running the workflow](#3)
 
 ### <a name="1">1. Environment setup</a>
-The workflow is intendent to be run in Bash on Linux operating systems. Miniconda or Anaconda installation is required. The workflow has been tested using Miniconda installation (conda 23.3.1) and the following packages:
-* python 3.9.16
+The workflow is intendent to be run in Bash on Linux operating systems. Miniconda or Anaconda installation is required. The workflow has been tested using Miniconda installation (conda 23.5.0) and the following packages:
+* python 3.10.11
 * pip 23.1.2
 * numpy 1.24.3
 * pandas 2.0.2
+* pysam 0.21.0
 * pyensembl 2.2.8
 * r-base 4.2.0
 * bioconductor-tcgabiolinks 2.25.3
@@ -29,21 +30,22 @@ To run the workflow three steps must be taken. Firstly, Nextflow must be install
 conda install -c bioconda -c conda-forge nextflow==23.04.1
 ```
 
-Then `workflow-env` environment should be created using `conda/workflow-env.txt` file:
+Then `workflow-py` and `workflow-r` environments should be created using `conda/workflow-py.txt` and `conda/workflow-r.txt` files, respectively:
 ```bash
-conda create --name workflow-env --file conda/workflow-env.txt
+conda create --name workflow-py --file conda/workflow-py.txt
+conda create --name workflow-r  --file conda/workflow-r.txt
 ```
-Important: `params.condaEnv` in `nextflow.config` file must indicated the path of the `workflow-env`. The default setting is `params.condaEnv = '/miniconda3/envs/workflow-env'`, and it is fit for usage in a Docker container. If you use the workflow in another way, please remember to change that to a valid path.
+Important: `params.condaEnvPy` and `params.condaEnvR` in `nextflow.config` file must indicated the path of the `workflow-py` and `workflow-r`, respectively. The default settings are `params.condaEnvPy = '/miniconda3/envs/workflow-py'` and `params.condaEnvR = '/miniconda3/envs/workflow-r'`, and it is fit for usage in a Docker container. If you use the workflow in another way, please remember to change those to valid paths of existing conda environments.
 
-Finally, the `pyensembl` package is supposed to be installed using `pip` into the `workflow-env` environment:
+Finally, the `pyensembl` package is supposed to be installed using `pip` into the `workflow-py` environment:
 ```bash
-conda activate workflow-env
+conda activate workflow-py
 pip install pyensembl==2.2.8
-conda deactivate workflow-env
+conda deactivate
 ```
 or
 ```bash
-<path_to_workflow-env_directory>/bin/pip install pyensembl==2.2.8
+<path_to_workflow-py_directory>/bin/pip install pyensembl==2.2.8
 ```
 
 ##### <a name="1.2">1.2. Automatic environment setup with Docker</a>
@@ -57,7 +59,7 @@ Then you can create a container and run it, e.g. interactively like this:
 docker run -it workflow-ubuntu:22.04
 ```
 
-You can download a ready-to-use `workflow-ubuntu:22.04` image [here](https://drive.google.com/file/d/1hm3M41m0Ps8cAvBeXfOuJvnovGW47ezE/view?usp=drive_link) (2.3&nbsp;GB).
+You can download a ready-to-use `workflow-ubuntu:22.04` image [here](https://drive.google.com/file/d/1i_Q9ittRX2utEBnbYEsc_xJ_tEzo9IG2/view?usp=drive_link) (2.6&nbsp;GB).
 
 ### <a name="2">2. Workflow detailed description</a>
 ##### <a name="2.1">2.1. Workflow tree</a>
@@ -65,7 +67,8 @@ Below you will find a tree of all workflow files that are provided. When the wor
 ```
 <workflow_location>/
 ├── conda/
-│   └── workflow-env.txt
+│   ├── workflow-py.txt
+│   └── workflow-r.txt
 ├── input/
 │   ├── library.fa
 │   └── TCGA_samples.txt
@@ -96,7 +99,7 @@ The workflow consists of the following stages/processes:
 | 1. | `buildIndex` |  Using `bowtie-build`, builds reference sequence index from sequences in the input `params.genomeFastaFile`. Uses `index/genome` as the index prefix and saves the index to the `output` subdirectory. |
 | 2. | `mapReads` | Using `bowtie2`, maps reads from the `params.readsFile` to `params.genomeFastaFile` reference. Saves the results to a gzipped SAM file `output/mapping.sam.gz`. |
 | 3. | `filterMapping` | Using `samtools view`, filters the mapping results in respect to MAPQ values (>= 30). Saves the results to a gzipped SAM file `output/mapping_filtered.sam.gz`. |
-| 4. | `analyseMapping`  | Using `templates/analyse_mapping.py` Python script, analyses filtered mapping results in order to calculate the end positions of mapped reads (based on CIGAR values) and the strand reads were mapped to (based on FLAG values). Saves the results to a gzipped TSV file `mapping_analysis.tsv.gz`. Next to QNAME, FLAG, RNAME, POS, MAPQ, CIGAR columns from the SAM input file (names are converted to lower case: `qname`, `flag`, `rname`, `pos`, `mapq`, `cigar`), renders the `end` (based on CIGAR) and `strand` (based on FLAG) columns that denote respectively the end locations of reads within the reference sequence and the strand of the reference sequence reads were mapped to. |
+| 4. | `analyseMapping`  | Using `templates/analyse_mapping.py` Python script that utilises Pysam module, analyses filtered mapping results in order to calculate the end positions of mapped reads (based on CIGAR values) and the strand reads were mapped to (based on FLAG values). Saves the results to a gzipped TSV file `mapping_analysis.tsv.gz`. Next to QNAME, FLAG, RNAME, POS, MAPQ, CIGAR columns from the SAM input file (names are converted to lower case: `qname`, `flag`, `rname`, `pos`, `mapq`, `cigar`), renders the `end` (based on CIGAR) and `strand` (based on FLAG) columns that denote respectively the end locations of reads within the reference sequence and the strand of the reference sequence reads were mapped to. The `pos` and `end` are 1-based and both inclusive, which corresponds to GenBank notation. |
 | 5. | `analyseGenes` | Using `templates/analyse_genes.py` Python script that utilises PyEnsembl module, obtains information of genes the input reads were mapped within. It uses `params.genomeGtfFile` that indicates the location of the file with annotations for the reference sequences. Saves the results to a gzipped TSV file `gene_analysis.tsv.gz`. The output file contains `qname` column (a read sequence id) next to `gene_names` and `gene_ids` columns that contain respectively gene names and their ids obtained from Ensembl database. If there is more than one gene in the locus where a given read was mapped, names/ids are separated by a semicolon followed by space (`'; '`). The resulting data may be used to check whether the gene name provided in a read sequence id (_qname_) may be found among names obtained from Ensembl database based on a read location. | 
 | 6. | `fetchMatrix` | Using `templates/fetch_matrix.r` R script that utilises TCGAbiolinks R Bioconductor module, obtains expression matrices for samples, the name of which are given in the `params.samplesTxtFile`. Saves the results to a gzipped TSV file `gene_matrix.tsv.gz`. The first column of the output file is an index column that contains gene ids (selected during the previous stage), and the remaining columns contain expression data for the samples in the order their ids are provided in the input `params.samplesTxtFile`. |
 

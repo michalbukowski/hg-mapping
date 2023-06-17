@@ -14,7 +14,7 @@
    the index directory (indexDir) and the full index prefix (indexPrefix).
 */
 process buildIndex{
-    conda      params.condaEnv
+    conda      params.condaEnvPy
     publishDir 'output', mode: 'link'
     shell      '/bin/bash', '-euo', 'pipefail'
     cpus       params.maxThreads
@@ -50,7 +50,7 @@ process buildIndex{
    trimming of read ends.
 */
 process mapReads{
-    conda      params.condaEnv
+    conda      params.condaEnvPy
     publishDir 'output', mode: 'link'
     shell      '/bin/bash', '-euo', 'pipefail'
     cpus       params.maxThreads
@@ -84,7 +84,7 @@ process mapReads{
    (samFiltFile) that contains the filtered mapping results.
 */
 process filterMapping{
-    conda      params.condaEnv
+    conda      params.condaEnvPy
     publishDir 'output', mode: 'link'
     shell      '/bin/bash', '-euo', 'pipefail'
     cpus       params.maxThreads
@@ -121,7 +121,7 @@ process filterMapping{
    of the reference sequence a read was mapped to.
 */
 process analyseMapping {
-    conda      params.condaEnv
+    conda      params.condaEnvPy
     publishDir 'output', mode: 'link'
     
     input:
@@ -156,7 +156,7 @@ process analyseMapping {
    Ensembl database based on a read location.
 */
 process analyseGenes {
-    conda      params.condaEnv
+    conda      params.condaEnvPy
     publishDir 'output', mode: 'link'
     
     input:
@@ -186,7 +186,7 @@ process analyseGenes {
    their ids are provided in the input file.
 */
 process fetchMatrix {
-    conda      params.condaEnv
+    conda      params.condaEnvR
     publishDir 'output', mode: 'link'
     
     input:
